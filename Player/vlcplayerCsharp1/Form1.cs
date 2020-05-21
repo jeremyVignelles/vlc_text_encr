@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace vlcplayerCsharp1
@@ -40,19 +34,21 @@ namespace vlcplayerCsharp1
         {
             // read file path from TextBox3.Text
             var FileStream = new FileStream(path: TextBox3.Text, mode: FileMode.Open, access: FileAccess.Read);
-            RijndaelManaged AES = new RijndaelManaged();
-            SHA256Cng SHA256 = new SHA256Cng();
-
-            // read key from TextBox4.Text
-            AES.Key = SHA256.ComputeHash(Encoding.ASCII.GetBytes(TextBox4.Text));
-            AES.Mode = CipherMode.ECB;
 
 
-            // cryptostream starts here
-            var cryptoStream = new CryptoStream(FileStream, AES.CreateDecryptor(), CryptoStreamMode.Read);
+            var streamWrapper = new SeekableStreamWrapper(() =>
+            {
+                FileStream.Seek(0, SeekOrigin.Begin);
+                RijndaelManaged AES = new RijndaelManaged();
+                SHA256Cng SHA256 = new SHA256Cng();
 
-            // reading decrypted cryptostream and saves into video.mp4
-           VlcControl1.Play(cryptoStream);
+                // read key from TextBox4.Text
+                AES.Key = SHA256.ComputeHash(Encoding.ASCII.GetBytes(TextBox4.Text));
+                AES.Mode = CipherMode.ECB;
+                return new CryptoStream(FileStream, AES.CreateDecryptor(), CryptoStreamMode.Read, true);
+            });
+
+            VlcControl1.Play(streamWrapper);
         }
 
         private void Button4_Click(object sender, EventArgs e)
